@@ -6,6 +6,7 @@ from runner import Runner
 from algorithms.thompson_sampling import ThompsonSamplingLearner
 from algorithms.bisection import BisectionLearner
 from algorithms.exp_weights import ExpWeights
+from algorithms.exp_fast import ExpWeightsFast
 
 
 # Set a nice plotting style.
@@ -16,8 +17,8 @@ if __name__ == "__main__":
     n = 100  # number of basis functions
     B = 5.0  # budget on sum of weights
     sigma = 0.001  # noise standard deviation
-    horizon = 2000  # number of time steps per trial
-    num_trials = 8  # number of independent trials
+    horizon = 200  # number of time steps per trial
+    num_trials = 27  # number of independent trials
 
     # Prior for weights: choose a random mean (normalized) and identity covariance.
     np.random.seed(42)
@@ -61,6 +62,11 @@ if __name__ == "__main__":
         (
             "ExpWeights",
             ExpWeights,
+            {"horizon": horizon},
+        ),
+        (
+            "ExpWeightsFast",
+            ExpWeightsFast,
             {"horizon": horizon},
         ),
     ]

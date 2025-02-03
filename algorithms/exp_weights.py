@@ -68,7 +68,6 @@ class ExpWeights(Learner):
         Record the observation.
         """
         super().update(x, y)
-        print(f"Took: {x}, Observation: {y}")
 
         # Update s_hats
         time_step = len(self.Xs) - 1
