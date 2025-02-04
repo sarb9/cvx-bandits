@@ -1,10 +1,6 @@
 import numpy as np
 from scipy.stats import truncnorm
 
-##############################
-#   UTILITY FUNCTIONS        #
-##############################
-
 
 def compute_minimizer(w, ts):
     """
@@ -17,11 +13,6 @@ def compute_minimizer(w, ts):
     idx = np.searchsorted(cum_weights, total_weight / 2)
     # For a little smoothness, we could interpolate between ts[idx-1] and ts[idx].
     return ts[min(idx, len(ts) - 1)]
-
-
-##############################
-#   HIT-AND-RUN SAMPLING     #
-##############################
 
 
 def conditional_params(i, current_w, current_mean, current_cov):
@@ -57,8 +48,6 @@ def sample_conditional(i, current_w, current_mean, current_cov, B):
     lower = 0.0
     upper = B - sum_others
     if upper < lower:  # safeguard
-        print(f"This should not happen: upper < lower: {upper} < {lower}")
-        print(f"{sd_cond}")
         upper = lower
     a, b = (lower - m_cond) / sd_cond, (upper - m_cond) / sd_cond
     new_val = truncnorm.rvs(a, b, loc=m_cond, scale=sd_cond)
@@ -66,13 +55,7 @@ def sample_conditional(i, current_w, current_mean, current_cov, B):
 
 
 def coordinate_hit_and_run(
-    current_mean,
-    current_cov,
-    B,
-    num_samples=1000,
-    burn_in=500,
-    init=None,
-    sample_at_least_once=False,
+    current_mean, current_cov, B, num_samples=1000, burn_in=500, init=None
 ):
     """
     Coordinate-wise hit-and-run (Gibbs) sampler for a Gaussian (truncated to the region
@@ -92,10 +75,6 @@ def coordinate_hit_and_run(
         current_w[i] = sample_conditional(i, current_w, current_mean, current_cov, B)
         if it >= burn_in:
             samples.append(np.copy(current_w))
-
-        if sample_at_least_once and it == total_iters - 1 and len(samples) == 0:
-            # If we want at least one sample, and we haven't got any yet, resample.
-            it = total_iters - 2
     return np.array(samples)
 
 
@@ -106,14 +85,5 @@ def sample_posterior(
     num_samples=1,
     burn_in=500,
     init=None,
-    sampler_type="coordinate",
-    sample_at_least_once=False,
 ):
-    """
-    Sample from the posterior distribution of a Gaussian with mean post_mean and covariance post_cov,
-    truncated to the region {w: w_i >= 0 for all i, sum(w) <= B}.
-    It's possible to add more sampler types in the future.
-    """
-    return coordinate_hit_and_run(
-        post_mean, post_cov, B, num_samples, burn_in, init, sample_at_least_once
-    )
+    return coordinate_hit_and_run(post_mean, post_cov, B, num_samples, burn_in, init)

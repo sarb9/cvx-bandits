@@ -10,7 +10,9 @@ import seaborn as sns
 
 
 class Runner:
-    def __init__(self, bandit_factory, learner_configs, horizon, num_trials=10):
+    def __init__(
+        self, bandit_factory, learner_configs, horizon, num_trials=10, problem=None
+    ):
         """
         bandit_factory: an instance of BanditFactory.
         learner_configs: a list of tuples, each of the form
@@ -24,6 +26,9 @@ class Runner:
         self.horizon = horizon
         self.num_trials = num_trials
         self.results = {}  # to store cumulative regret curves for each learner
+        self.problem = problem
+
+        self.learners = []  # Just for visualization
 
     def run_trial(self, trial_id):
         """
@@ -31,7 +36,11 @@ class Runner:
         Returns the cumulative regret curve for this trial.
         """
         # Create a new problem instance from the factory
-        problem = self.bandit_factory.create_problem()
+        problem = (
+            self.bandit_factory.create_problem()
+            if self.problem is None
+            else self.problem
+        )
 
         # Instantiate learners for this trial
         learners = {}
@@ -60,7 +69,7 @@ class Runner:
                     print(
                         f"Trial {trial_id + 1}/{self.num_trials}, Time step {t}/{self.horizon}, Learner {name}, Regret: {learner.cum_regret}"
                     )
-        return trial_regrets
+        return trial_regrets, learners
 
     def run(self):
         # Initialize regret curves (averaged over trials)
@@ -78,9 +87,10 @@ class Runner:
 
             # Collect the results as they complete
             for future in concurrent.futures.as_completed(futures):
-                trial_regrets = future.result()
+                trial_regrets, learners = future.result()
                 for name, regret_curve in trial_regrets.items():
                     regrets[name].append(regret_curve)
+                self.learners.append(learners)
 
                 print(f"{trial_regrets.keys()} completed.")
 
@@ -90,7 +100,8 @@ class Runner:
         return regrets
 
     def plot_regret(self, individual=False):
-        sns.set(style="whitegrid", context="talk", font_scale=1.1)
+
+        sns.set_theme(style="ticks", context="paper", font_scale=1)
         plt.figure(figsize=(10, 6))
 
         x_values = np.arange(1, self.horizon + 1)
