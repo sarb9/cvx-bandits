@@ -4,7 +4,7 @@ from sampling import sample_posterior, compute_minimizer
 
 
 class BanditProblem:
-    def __init__(self, w_true, ts, sigma, f_star=None):
+    def __init__(self, w_true, ts, sigma, f_star=None, B=5):
         """
         w_true: true weight vector defining f*(x) = sum_i w_true[i]*|x - ts[i]|
         ts: array of basis centers (assumed sorted)
@@ -13,6 +13,7 @@ class BanditProblem:
         self.w_true = w_true
         self.ts = ts
         self.sigma = sigma
+        self.B = B
 
         # f_star overrides the true function if provided.
         self.f_star = True
@@ -37,7 +38,9 @@ class BanditProblem:
         """
         true_val = self.f(np.array([x]))[0]
         noise = np.random.normal(0, self.sigma)
-        return true_val + noise
+        interval = [0, self.B]
+        loss = np.clip(true_val + noise, interval[0], interval[1])
+        return loss
 
     def compute_optimum(self):
         """
