@@ -6,14 +6,29 @@ from algorithms.learner import Learner
 
 class ExpWeights(Learner):
 
-    def __init__(self, horizon):
+    def __init__(
+        self,
+        interval,
+        prior_mu,
+        prior_Sigma,
+        B,
+        n_basis,
+        noise_sigma,
+        horizon,
+        name,
+    ):
+        super().__init__(
+            interval,
+            prior_mu,
+            prior_Sigma,
+            B,
+            n_basis,
+            noise_sigma,
+            horizon,
+            name,
+        )
 
-        self.history_x = []
-        self.history_y = []
-        self.cum_regret = 0
         self.Xs = []
-
-        self.horizon = horizon
         self.epsilon = 1 / np.sqrt(horizon)
         self.learning_rate = 1 / np.sqrt(horizon)
 

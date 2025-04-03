@@ -1,10 +1,11 @@
 import numpy as np
+from scipy.stats import truncnorm
 
 from sampling import sample_posterior, compute_minimizer
 
 
 class BanditProblem:
-    def __init__(self, w_true, ts, sigma, f_star=None, B=5):
+    def __init__(self, w_true, ts, sigma, f_star=None, B=5, interval=[-1, 1]):
         """
         w_true: true weight vector defining f*(x) = sum_i w_true[i]*|x - ts[i]|
         ts: array of basis centers (assumed sorted)
@@ -14,10 +15,11 @@ class BanditProblem:
         self.ts = ts
         self.sigma = sigma
         self.B = B
+        self.interval = interval
 
         # f_star overrides the true function if provided.
         self.f_star = True
-        self.f = self._f if f_star is None else f_star
+        self.f = f_star if f_star else self._f
 
         self.optimal_x, self.optimal_value = self.compute_optimum()
 
@@ -37,9 +39,12 @@ class BanditProblem:
         Given a query point x (scalar), return a noisy observation of f*(x).
         """
         true_val = self.f(np.array([x]))[0]
-        noise = np.random.normal(0, self.sigma)
         interval = [0, self.B]
-        loss = np.clip(true_val + noise, interval[0], interval[1])
+        # Truncate the normal distribution to the interval [0, B] with mean true_val and variance sigma.
+        a, b = (interval[0] - true_val) / self.sigma, (
+            interval[1] - true_val
+        ) / self.sigma
+        loss = truncnorm.rvs(a, b, loc=true_val, scale=self.sigma)
         return loss
 
     def compute_optimum(self):
@@ -49,7 +54,8 @@ class BanditProblem:
         """
         if self.f_star:
             # Find the minimizer of f* by grid search.
-            xs = np.linspace(0, 1, 1000)
+            xs = np.linspace(self.interval[0], self.interval[1], 1000)
+
             fs = [self.f(x) for x in xs]
             x_star = xs[np.argmin(fs)]
             f_star = np.min(fs)
@@ -61,7 +67,7 @@ class BanditProblem:
 
 
 class BanditFactory:
-    def __init__(self, prior_mu, prior_Sigma, B, n, sigma):
+    def __init__(self, prior_mu, prior_Sigma, interval, B, n_basis, sigma):
         """
         prior_mu, prior_Sigma: parameters for the Gaussian prior over weights.
         B: budget (constraint: sum(w) <= B, w_i >= 0)
@@ -71,9 +77,11 @@ class BanditFactory:
         self.mu = prior_mu
         self.Sigma = prior_Sigma
         self.B = B
-        self.n = n
+        self.n_basis = n_basis
         self.sigma = sigma
-        self.ts = np.linspace(1 / n, 1, n)
+        self.interval = interval
+
+        self.ts = np.linspace(self.interval[0], self.interval[1], self.n_basis)
 
     def create_problem(self):
         """

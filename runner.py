@@ -11,16 +11,8 @@ import seaborn as sns
 
 class Runner:
     def __init__(
-        self, bandit_factory, learner_configs, horizon, num_trials=10, problem=None
+        self, bandit_factory, learner_configs, horizon, num_trials, problem=None
     ):
-        """
-        bandit_factory: an instance of BanditFactory.
-        learner_configs: a list of tuples, each of the form
-                         (learner_name, learner_class, learner_kwargs)
-                         where learner_kwargs is a dict of parameters.
-        horizon: number of time steps per trial.
-        num_trials: number of independent trials to average over.
-        """
         self.bandit_factory = bandit_factory
         self.learner_configs = learner_configs
         self.horizon = horizon
@@ -44,7 +36,8 @@ class Runner:
 
         # Instantiate learners for this trial
         learners = {}
-        for name, learner_class, learner_kwargs in self.learner_configs:
+        for learner_class, learner_kwargs in self.learner_configs:
+            name = learner_kwargs["name"]
             learners[name] = learner_class(**learner_kwargs)
 
         print("Optimal action and value: ", problem.compute_optimum())
@@ -73,7 +66,7 @@ class Runner:
 
     def run(self):
         # Initialize regret curves (averaged over trials)
-        regrets = {name: [] for (name, _, _) in self.learner_configs}
+        regrets = {kwargs["name"]: [] for (_, kwargs) in self.learner_configs}
 
         # for trial in range(self.num_trials):
 

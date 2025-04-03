@@ -6,13 +6,20 @@ from algorithms.learner import Learner
 
 class ExpWeightsFast(Learner):
 
-    def __init__(self, horizon):
-
-        self.history_x = []
-        self.history_y = []
-        self.cum_regret = 0
-
-        self.horizon = horizon
+    def __init__(
+        self,
+        interval,
+        prior_mu,
+        prior_Sigma,
+        B,
+        n_basis,
+        noise_sigma,
+        horizon,
+        name,
+    ):
+        super().__init__(
+            interval, prior_mu, prior_Sigma, B, n_basis, noise_sigma, horizon, name
+        )
         self.epsilon = 1 / np.sqrt(horizon)
         self.learning_rate = 1 / np.sqrt(horizon)
 
@@ -24,16 +31,12 @@ class ExpWeightsFast(Learner):
         self.pi_mu = None
         self.X = None
         self.pX_given_y = None
+        self.q = None
 
     def smaller_index(self, x: float) -> int:
-        """ """
         return math.floor(x / self.epsilon)
 
     def select_action(self):
-        """
-        Select the action.
-        """
-
         q = np.ones(len(self.l))
         for x in range(len(self.l)):
             q[x] *= np.exp(-self.learning_rate * self.s_hats[x])

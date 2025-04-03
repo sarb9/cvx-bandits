@@ -6,40 +6,31 @@ from algorithms.learner import Learner
 
 class BisectionLearner(Learner):
 
-    def __init__(self, initial_interval, horizon, delta, sigma, confidence_const=24):
-        """
-        BisectionLearner implements the noisy bisection method (Algorithms 4.2 and 4.3) for
-        one-dimensional convex optimization.
+    def __init__(
+        self,
+        interval,
+        prior_mu,
+        prior_Sigma,
+        B,
+        n_basis,
+        noise_sigma,
+        horizon,
+        name,
+        delta,
+        confidence_const=24,
+    ):
 
-        Parameters:
-          initial_interval : [x, y] defining the initial search interval.
-          n                : total query budget (n) for the bisection method.
-          delta            : confidence parameter.
-          sigma            : noise standard deviation.
-          confidence_const : constant in the confidence bound (default: 24).
-
-        Note:
-          This learner does not use a Bayesian prior (and hence the usual prior_mu, prior_Sigma, B, n)
-          so we call the parent Learner constructor with dummy values for consistency.
-        """
-        # TODO: Implement the constructor.
-        # super().__init__(prior_mu=None, prior_Sigma=None, B=None, n=None, sigma=sigma)
-        self.history_x = []
-        self.history_y = []
-        self.cum_regret = 0.0  # cumulative regret
-
-        self.sigma = sigma
-        self.name = "BisectionLearner"
-        self.initial_interval = initial_interval
+        super().__init__(
+            interval, prior_mu, prior_Sigma, B, n_basis, noise_sigma, horizon, name
+        )
         self.delta = delta
         self.confidence_const = confidence_const
-        self.horizon = horizon
 
         self.current_time_step = 1  # Current "REAL" time step.
         self.remaining_rounds = None  # Remaining rounds for the current interval.
         self.action_number = None
 
-        self.K = np.copy(initial_interval)
+        self.K = np.copy(interval)
         self.reset_bisection()
 
         self.k_max = 1 + math.ceil(math.log(self.horizon) / math.log(4 / 3))
@@ -93,7 +84,7 @@ class BisectionLearner(Learner):
             f_hat_2 = np.mean(self.action_values[2])
 
             # Confidence bound.
-            c = self.sigma * np.sqrt(
+            c = self.noise_sigma * np.sqrt(
                 (self.confidence_const / self.bisect_round)
                 * np.log((4 * self.remaining_rounds) / (3 * self.delta))
             )

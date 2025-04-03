@@ -6,33 +6,42 @@ from algorithms.learner import Learner
 
 class ONS(Learner):
 
-    def __init__(self, horizon, interval, delta, M=1, C=1):
-        self.history_x = []
-        self.history_y = []
-        self.interval = interval
-        self.cum_regret = 0
+    def __init__(
+        self,
+        interval,
+        prior_mu,
+        prior_Sigma,
+        B,
+        n_basis,
+        noise_sigma,
+        horizon,
+        name,
+        sigma,
+        lambda_,
+        eta,
+        epsilon,
+        delta,
+        C,
+    ):
+        super().__init__(
+            interval, prior_mu, prior_Sigma, B, n_basis, noise_sigma, horizon, name
+        )
 
+        self.sigma = sigma
+        self.lambda_ = lambda_
+        self.eta = eta
+        self.epsilon = epsilon
         self.delta = delta
+
         L = C * np.log(1 / delta)
-
-        self.horizon = horizon
-        self.variance = 0.1  # / (10 * M * np.sqrt(L))
-        self.lamda = 0.1  # / (40 * M * (L**3.5))
-        self.eta = 0.01  # 4 * M #/ (3 * np.sqrt(horizon * L)) * 100
-        self.epsilon = (
-            1 / 100
-        )  # min(600 * M * (L**5.5) / np.sqrt(horizon), 1 / np.sqrt(horizon))
-
-        assert interval[0] <= 0 <= interval[1]
-        assert 0 < self.epsilon
-        assert self.epsilon < 0.5
 
         self.mu = 0
         self.gs = 0
+        self.X = None
 
     def minkowski_functional(self, x):
         """
-        Minkowski functional for convex body [0, 1].
+        Minkowski projection wrt convex body [-1, 1].
         """
         return np.abs(x)
 
@@ -44,8 +53,8 @@ class ONS(Learner):
         Select the action.
         """
         # Sample X from the normal distribution with mean mu and variance variance.
-        X = np.random.normal(self.mu, self.variance)
-        action = X / self.minkowski_functional_pi(X)
+        self.X = np.random.normal(self.mu, self.sigma)
+        action = self.X / self.minkowski_functional_pi(self.X)
 
         assert self.interval[0] <= action <= self.interval[1]
 
@@ -58,8 +67,8 @@ class ONS(Learner):
         """
         Probability density function of the normal distribution with mean mu and variance variance.
         """
-        return np.exp(-0.5 * (x - self.mu) ** 2 / self.variance) / np.sqrt(
-            2 * np.pi * self.variance
+        return np.exp(-0.5 * (x - self.mu) ** 2 / self.sigma) / np.sqrt(
+            2 * np.pi * self.sigma
         )
 
     def update(self, x, y):
@@ -68,23 +77,25 @@ class ONS(Learner):
         """
         super().update(x, y)
 
-        X = x
-        Y = self.minkowski_functional_pi(X) * y + (2 * self.v(x)) / self.epsilon
+        Y = (
+            self.minkowski_functional_pi(self.X) * y
+            + (2 * self.v(self.X)) / self.epsilon
+        )
 
-        r = (X - self.lamda * self.mu) / (1 - self.lamda)
-        R = self.density(r) / ((1 - self.lamda) * self.density(X))
+        r = (self.X - self.lambda_ * self.mu) / (1 - self.lambda_)
+        R = self.density(r) / ((1 - self.lambda_) * self.density(self.X))
 
-        g = (R * Y * (1 / self.variance) * (X - self.mu)) / ((1 - self.lamda) ** 2)
+        g = (R * Y * (1 / self.sigma) * (self.X - self.mu)) / ((1 - self.lambda_) ** 2)
 
-        H_1 = (self.lamda * R * Y) / (2 * (1 - self.lamda) ** 2)
-        H_2 = (X - self.mu) ** 2 / (
-            (1 - self.lamda) ** 2 * self.variance**2
-        ) - 1 / self.variance
+        H_1 = (self.lambda_ * R * Y) / (2 * (1 - self.lambda_) ** 2)
+        H_2 = (self.X - self.mu) ** 2 / (
+            (1 - self.lambda_) ** 2 * self.sigma**2
+        ) - 1 / self.sigma
         H = H_1 * H_2
 
-        self.variance = 1 / (1 / self.variance + self.eta * H)
+        self.sigma = 1 / (1 / self.sigma + self.eta * H)
 
-        target = self.mu - self.eta * g * self.variance
+        target = self.mu - self.eta * g * self.sigma
         # set mu to the projection of target onto the interval * (1 - epsilon)
         self.mu = min(
             max(target, self.interval[0] * (1 - self.epsilon)),

@@ -5,13 +5,25 @@ from sampling import sample_posterior, compute_minimizer
 
 
 class ThompsonSamplingLearner(Learner):
-    def __init__(self, prior_mu, prior_Sigma, B, n, noise_sigma, burn_in):
+    def __init__(
+        self,
+        interval,
+        prior_mu,
+        prior_Sigma,
+        B,
+        n_basis,
+        noise_sigma,
+        horizon,
+        name,
+        burn_in=500,
+    ):
         """
         Thompson Sampling learner which uses hit-and-run to sample a function from the posterior.
         """
-        super().__init__(prior_mu, prior_Sigma, B, n, noise_sigma)
-        self.ts = np.linspace(1 / n, 1, n)
-        self.name = f"ThompsonSampling"
+        super().__init__(
+            interval, prior_mu, prior_Sigma, B, n_basis, noise_sigma, horizon, name
+        )
+        self.ts = np.linspace(interval[0], interval[1], n_basis)
         self.burn_in = burn_in
 
         self.ws = (
